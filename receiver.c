@@ -16,6 +16,8 @@ int nb_hits = 0;
 int nb_miss = 0;
 int firstHit = 0; // bool
 size_t beginTime;
+char message[9];
+int cpt = 0;
 
 void flushandreload(void* addr)
 {
@@ -30,10 +32,10 @@ void flushandreload(void* addr)
       
        if(!firstHit) {
          firstHit = 1;
-         beginTime = rdtsc(); 
+         beginTime = rdtsc();
          nb_hits = 0;   
-         nb_miss = 0; 
-       }   
+         nb_miss = 0;   
+       }
 
         nb_hits++;     
 
@@ -45,6 +47,34 @@ void flushandreload(void* addr)
     kpause++;
     nb_miss++;
   }
+  if(firstHit && rdtsc() - beginTime >= 10000000) {
+      double mean = nb_hits/(nb_miss*1.0);
+      printf("NbHits: %d, NbMiss: %d, Mean: %f \n", nb_hits, nb_miss, mean);
+      if(cpt < 8) {        
+        if(mean > 0.7) message[cpt] = 1;
+        else message[cpt] = 0;
+        cpt++;
+        if(cpt==8) {
+          message[cpt] = '\0';
+          printf("%s", message);
+        }
+      }      
+      firstHit = 0;
+      nb_hits = 0;   
+      nb_miss = 0;   
+  }
+}
+
+long file_size(const char *filename)
+{
+   struct stat s;
+ 
+   if  (stat(filename,&s) != 0) {
+      printf("error!\n" );
+      return 0;
+   }
+ 
+   return s.st_size;
 }
 
 int main(int argc, char** argv)
@@ -66,25 +96,23 @@ int main(int argc, char** argv)
     return 2;
   }
 
-
-  // MMAP => taille du fichier à la place de 64*1024*1024
-
-
-  unsigned char* addr = (unsigned char*)mmap(0, 64*1024*1024, PROT_READ, MAP_SHARED, fd, 0);
+  unsigned char* addr = (unsigned char*)mmap(0, file_size(name), PROT_READ, MAP_SHARED, fd, 0);
   if (addr == (void*)-1 || addr == (void*)0)
   {
     printf("error: failed to mmap\n");
     return 2;
   }
+  
+  size_t time;
+  int r;
+
   while(1)
   {
-    if(firstHit && rdtsc() - beginTime >= 10000000000) {
-        printf("NbHits: %d, NbMiss: %d, Mean: %f \n", nb_hits, nb_miss, nb_hits/(nb_miss*1.0));
-        firstHit = 0;
-        nb_hits = 0;   
-        nb_miss = 0;   
-    }
-    flushandreload(addr + offset);
+    time = rdtsc();    
+    r = time / 10000000000;
+    if(r % 10 == 0) {
+      flushandreload(addr + offset);
+    }    
     for (int i = 0; i < 3; ++i)
       sched_yield();
   }

@@ -10,23 +10,37 @@
 
 #define MIN_CACHE_MISS_CYCLES (285)
 
+long file_size(const char *filename)
+{
+   struct stat s;
+ 
+   if  (stat(filename,&s) != 0) {
+      printf("error!\n" );
+      return 0;
+   }
+ 
+   return s.st_size;
+}
+
 int main(int argc, char** argv)
 {
   char* name = argv[1];
   char* offsetp = argv[2];
-  char* valuesetp = argv[3]; // 1 ou 0
+  char* value = argv[3];
+  char* length = argv[4];
 
-  if (argc != 4)
+  if (argc != 5)
   {    
-    printf("  usage: ./sender file offset value\n"
-                 "example: ./sender chaton.jpeg 0x00 1\n");
+    printf("  usage: ./sender file offset value valueLength\n"
+                 "example: ./sender chaton.jpeg 0x00 100110 6\n");
     return 1;
   }
 
   unsigned int offset = 0;
-  unsigned int value = 0;
   !sscanf(offsetp,"%x",&offset);
-  !sscanf(valuesetp,"%d",&value);
+
+  unsigned int len = 0;
+  !sscanf(length,"%d",&len);
 
   int fd = open(name,O_RDONLY);
   if (fd < 3)
@@ -35,7 +49,7 @@ int main(int argc, char** argv)
     return 2;
   }
 
-  unsigned char* addr = (unsigned char*)mmap(0, 64*1024*1024, PROT_READ, MAP_SHARED, fd, 0);
+  unsigned char* addr = (unsigned char*) mmap(0, file_size(name), PROT_READ, MAP_SHARED, fd, 0);
 
   if (addr == (void*)-1 || addr == (void*)0)
   {
@@ -43,10 +57,21 @@ int main(int argc, char** argv)
     return 2;
   }
 
-  if(value) {
-    size_t time = rdtsc(); 
-    printf("Sending... \n");
-    while(rdtsc() - time < 10000000000) maccess(addr + offset);
+  int r;
+  size_t time;
+
+  // infinite loop
+
+  for(int i = 0; i < len; ++i) {
+    
+    do {
+      time = rdtsc();    
+      r = time / 10000000000;
+    }
+    while(r%10!=0);
+
+    if(value[i] == '1') while(rdtsc() - time < 10000000) maccess(addr + offset);
+    else                while(rdtsc() - time < 10000000);
   }
   
   return 0;

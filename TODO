@@ -2,4 +2,9 @@
 > partagent la mémoire d'un fichier (photo?), d'une librairie
 
 A -> Accède
-B -> loop FlushAndReload ? Si hit, A y a accédé.
+B -> loop FlushAndReload ? Si hit, A y a accédé..
+
+
+
+18536710679608: Cache Hit (182 cycles) after a pause of 1 cycles
+Lorsque le 4ème chiffre est à 0 => on communique
