@@ -1,0 +1,5 @@
+> 2 programmes (emetteur A, recepteur B) = 2 proc distincts
+> partagent la mémoire d'un fichier (photo?), d'une librairie
+
+A -> Accède
+B -> loop FlushAndReload ? Si hit, A y a accédé.
