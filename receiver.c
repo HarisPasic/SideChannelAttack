@@ -10,20 +10,19 @@
 
 #define MIN_CACHE_MISS_CYCLES (285)
 #define SYNCING_CYCLE 1000000000.
-#define WORKING_CYCLE 100000000 
 
 size_t kpause = 0;
 
 int nb_hits = 0;
 int nb_miss = 0;
-int firstHit = 0; // bool
-int isSynced = 0; // bool
+int wasInSync = 0; // bool
+int wasInResult = 0; // bool
 size_t beginTime;
-char message[9];
+char message[21];
 int cpt = 0;
 
 void reset() {
-  firstHit = 0;
+  wasInSync = 0;
   nb_hits = 0;   
   nb_miss = 0;  
 }
@@ -35,24 +34,15 @@ void flushandreload(void* addr)
   size_t delta = rdtsc() - time;
   flush(addr);
   if (delta < MIN_CACHE_MISS_CYCLES) {
-    if (kpause > 0) {
-      
-      if(isSynced) {
-       if(!firstHit) {
-         reset();
-         beginTime = rdtsc();
-         firstHit = 1;          
-       }
-       nb_hits++;     
-      }
-
+    if (kpause > 0) {      
+      nb_hits++;
       printf("%lu: Cache Hit (%lu cycles) after a pause of %lu cycles\n", time, delta, kpause);
     }
     kpause = 0;
   }
   else {
     kpause++;
-    if(isSynced) nb_miss++;
+    nb_miss++;
   }  
 }
 
@@ -68,6 +58,7 @@ long file_size(const char *filename) {
 int main(int argc, char** argv) {
   char* name = argv[1];
   char* offsetp = argv[2];
+
   if (argc != 3) {    
     printf("usage: ./receiver file offset\n");
     printf("example: ./receiver chaton.jpeg 0x00\n");
@@ -88,30 +79,42 @@ int main(int argc, char** argv) {
     printf("error: failed to mmap\n");
     return 2;
   }
+  
+  message[20] = '\n';
 
   while(1) {    
 
-    if(((int)(rdtsc() / SYNCING_CYCLE)) % 10 == 0)  {isSynced = 1; reset();}
-    else                                            isSynced = 0;    
-
-    flushandreload(addr + offset);
-
-    // printf("%d\n", isSynced);
-
-    if(isSynced && firstHit && rdtsc() - beginTime >= WORKING_CYCLE) {
-      double mean = nb_hits / ((double) nb_miss);
-      printf("NbHits: %d, NbMiss: %d, Mean: %f \n", nb_hits, nb_miss, mean);
-      /*if(cpt < 8) {
-        if(mean > 0.7) message[cpt] = 1;
-        else message[cpt] = 0;
+    if(((int)(rdtsc() / SYNCING_CYCLE)) % 10 == 0)  { // IN SYNC      
+      if(!wasInSync) {
+        // printf("\nIN SYNC...\n");
+        reset();     
+        wasInSync = 1;
+        wasInResult = 0;       
+      }      
+    } else { // NOT IN SYNC      
+      if(!wasInResult) {
+        // printf("NOT IN SYNC\n");
+        wasInResult = 1;
+        double mean = 0;      
+        if(nb_miss > 0) mean = nb_hits / ((double) nb_miss);
+        //printf("NbHits: %d, NbMiss: %d, Mean: %f \n", nb_hits, nb_miss, mean);
+        if(cpt%20==0) printf("\n");
+        if(mean > 0.7) printf("[1]");
+        else printf("[0]");
+        /*if(cpt < 19) {
+          if(mean > 0.7) message[cpt] = (char) 1;
+          else message[cpt] = (char) 0;
+          cpt++;
+        } else {
+          printf("MESSAGE : [ %s ]\n", message);
+          cpt = 0;
+        }*/
         cpt++;
-        if(cpt==8) {
-          message[cpt] = '\0';
-          printf("%s", message);
-        }
-      }*/
-      reset();  
-    }    
+        wasInSync = 0;
+      }
+    }
+
+    flushandreload(addr + offset);  
 
     for (int i = 0; i < 3; ++i) sched_yield();
   }

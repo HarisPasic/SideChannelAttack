@@ -10,7 +10,6 @@
 
 #define MIN_CACHE_MISS_CYCLES (285)
 #define SYNCING_CYCLE 1000000000.
-#define WORKING_CYCLE 100000000 
 
 long file_size(const char *filename) {
    struct stat s; 
@@ -52,32 +51,16 @@ int main(int argc, char** argv) {
     return 2;
   }
 
-  size_t time;
-  int isSynced = 0;
-  int i = -1;
-
+  int i = 0;
   while(1) {
-    
-    // SYNC
-    if(((int)(rdtsc() / SYNCING_CYCLE)) % 10 == 0)  { 
-      isSynced = 1;
-      time = rdtsc();
-
-
-
-    // TODO  IF SYNC blabla
-      i++;
-    }
-    else isSynced = 0;
-
-
-    printf("%d, %d \n", isSynced, i);
-    
-    // COMMUNICATE
-    if(isSynced) {
-       if(i>20) goto end;
-       if(value[i] == '1')  if(rdtsc() - time < WORKING_CYCLE) maccess(addr + offset); // SEND 1
-       else                 if(rdtsc() - time < WORKING_CYCLE);                        // WAIT
+    if(((int)(rdtsc() / SYNCING_CYCLE)) % 10 == 0)  { // IN SYNC       
+       if(i==len) {
+        printf("\n");
+        goto end;
+       }
+       if(value[i] == '1') maccess(addr + offset);
+       printf("%c", value[i]);
+       i++;
     }
   }
   end: return 0;
