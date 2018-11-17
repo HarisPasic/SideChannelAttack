@@ -9,7 +9,7 @@
 #include "./cacheutils.h"
 
 #define MIN_CACHE_MISS_CYCLES (210)
-#define SYNCING_CYCLE 100000000.
+#define MASK 1<<23
 
 long file_size(const char *filename) {
    struct stat s; 
@@ -54,9 +54,10 @@ int main(int argc, char** argv) {
 	int mut = 0;
 	int mod = 1;
   int i = 0;
+	size_t mask = MASK;
 	// Sending 10101010101...
   while(1) {
-    if(((int)(rdtsc() / SYNCING_CYCLE)) % 10 == 0)  { // IN SYNC
+		if((rdtsc() & mask) == 0)  { // IN SYNC
 			if(!mut) mut = 1;			
       if(mod) maccess(addr + offset);
 			// printf("%d\n",i);			

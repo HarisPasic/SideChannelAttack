@@ -9,7 +9,9 @@
 #include "./cacheutils.h"
 
 #define MIN_CACHE_MISS_CYCLES (210)
-#define SYNCING_CYCLE 100000000.
+#define MASK 1<<23
+
+// MASK 1<<23 : 148 bits/s
 
 size_t kpause = 0;
 
@@ -85,11 +87,13 @@ int main(int argc, char** argv) {
 	}
 
 	lastBits[size] = '\0';
+	size_t mask = MASK;
   
 	// Display the last x bits...
   while(1) {    
-
-    if(((int)(rdtsc() / SYNCING_CYCLE)) % 10 == 0)  { // IN SYNC
+		
+    // if(((int)(rdtsc() / SYNCING_CYCLE)) % 10 == 0)  { // IN SYNC
+    if((rdtsc() & mask) == 0)  { // IN SYNC
       if(!mut) {
 				mut = 1;
         reset();
@@ -97,14 +101,14 @@ int main(int argc, char** argv) {
     } else { // NOT IN SYNC      
       if(mut) {
         mut = 0;
-        double mean = 0;      
-        if(nb_miss > 0) mean = nb_hits / ((double) nb_miss);        
-        if(mean > 0.5) lastBits[cpt % size] = '1';
-				else 						lastBits[cpt % size] = '0';
+        double mean = nb_hits;      
+        if(nb_miss != 0) mean = nb_hits / ((double) nb_miss);        
+        if(mean > 0.15) lastBits[cpt % size] = '1';
+				else 					 lastBits[cpt % size] = '0';
         cpt++;
 				if (cpt == 800000) cpt = 0;
-				printf("Message: [%s], NbHits: %d, NbMiss: %d, Mean: %f\n", 
-								lastBits, nb_hits, nb_miss, mean);
+				printf("Message: [%s], NbHits: %d, NbMiss: %d, Mean: %f, cpt: %d\n", 
+								lastBits, nb_hits, nb_miss, mean, cpt);
       }
     }
 
