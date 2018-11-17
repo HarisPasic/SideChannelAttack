@@ -8,21 +8,19 @@
 #include <stdint.h>
 #include "./cacheutils.h"
 
-#define MIN_CACHE_MISS_CYCLES (285)
+#define MIN_CACHE_MISS_CYCLES (210)
 #define SYNCING_CYCLE 1000000000.
 
 size_t kpause = 0;
 
 int nb_hits = 0;
 int nb_miss = 0;
-int wasInSync = 0; // bool
-int wasInResult = 0; // bool
+int mut = 0; // boolean
 size_t beginTime;
-char message[21];
-int cpt = 0;
+char lastEightBits[9] = {'0','0','0','0','0','0','0','0','\0'};
+int cpt = 0.0;
 
 void reset() {
-  wasInSync = 0;
   nb_hits = 0;   
   nb_miss = 0;  
 }
@@ -36,7 +34,7 @@ void flushandreload(void* addr)
   if (delta < MIN_CACHE_MISS_CYCLES) {
     if (kpause > 0) {      
       nb_hits++;
-      printf("%lu: Cache Hit (%lu cycles) after a pause of %lu cycles\n", time, delta, kpause);
+      // printf("%lu: Cache Hit (%lu cycles) after a pause of %lu cycles\n", time, delta, kpause);
     }
     kpause = 0;
   }
@@ -80,37 +78,25 @@ int main(int argc, char** argv) {
     return 2;
   }
   
-  message[20] = '\n';
-
+	// Display the last eight bits...
   while(1) {    
 
-    if(((int)(rdtsc() / SYNCING_CYCLE)) % 10 == 0)  { // IN SYNC      
-      if(!wasInSync) {
-        // printf("\nIN SYNC...\n");
-        reset();     
-        wasInSync = 1;
-        wasInResult = 0;       
+    if(((int)(rdtsc() / SYNCING_CYCLE)) % 10 == 0)  { // IN SYNC
+      if(!mut) {
+				mut = 1;
+        reset();
       }      
     } else { // NOT IN SYNC      
-      if(!wasInResult) {
-        // printf("NOT IN SYNC\n");
-        wasInResult = 1;
+      if(mut) {
+        mut = 0;
         double mean = 0;      
         if(nb_miss > 0) mean = nb_hits / ((double) nb_miss);
-        //printf("NbHits: %d, NbMiss: %d, Mean: %f \n", nb_hits, nb_miss, mean);
-        if(cpt%20==0) printf("\n");
-        if(mean > 0.7) printf("[1]");
-        else printf("[0]");
-        /*if(cpt < 19) {
-          if(mean > 0.7) message[cpt] = (char) 1;
-          else message[cpt] = (char) 0;
-          cpt++;
-        } else {
-          printf("MESSAGE : [ %s ]\n", message);
-          cpt = 0;
-        }*/
+        printf("NbHits: %d, NbMiss: %d, Mean: %f \n", nb_hits, nb_miss, mean);
+        if(mean > 0.67) lastEightBits[cpt%8] = '1';
+				else 						lastEightBits[cpt%8] = '0';
         cpt++;
-        wasInSync = 0;
+				if (cpt == 800000) cpt = 0;
+				printf("[%s]\n", lastEightBits);
       }
     }
 

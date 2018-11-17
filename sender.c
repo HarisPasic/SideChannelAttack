@@ -8,7 +8,7 @@
 #include <stdint.h>
 #include "./cacheutils.h"
 
-#define MIN_CACHE_MISS_CYCLES (285)
+#define MIN_CACHE_MISS_CYCLES (210)
 #define SYNCING_CYCLE 1000000000.
 
 long file_size(const char *filename) {
@@ -51,17 +51,24 @@ int main(int argc, char** argv) {
     return 2;
   }
 
+	int mut = 0;
+	int mod2 = 1;
   int i = 0;
+	// Sending 10101010101...
   while(1) {
-    if(((int)(rdtsc() / SYNCING_CYCLE)) % 10 == 0)  { // IN SYNC       
-       if(i==len) {
-        printf("\n");
-        goto end;
-       }
-       if(value[i] == '1') maccess(addr + offset);
-       printf("%c", value[i]);
-       i++;
-    }
+    if(((int)(rdtsc() / SYNCING_CYCLE)) % 10 == 0)  { // IN SYNC
+			if(!mut) mut = 1;			
+      if(mod2) maccess(addr + offset);
+			// printf("%d\n",i);			
+    } else {
+			if(mut) {
+				i++;
+				if(i == 2000000000) i = 0;
+				if(i % 2 == 0) mod2 = 1;
+				else mod2 = 0;
+				mut = 0;		
+			}
+		}		
   }
-  end: return 0;
+  return 0;
 }
