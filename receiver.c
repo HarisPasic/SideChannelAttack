@@ -9,7 +9,7 @@
 #include "./cacheutils.h"
 
 #define MIN_CACHE_MISS_CYCLES (210)
-#define SYNCING_CYCLE 1000000000.
+#define SYNCING_CYCLE 100000000.
 
 size_t kpause = 0;
 
@@ -17,7 +17,7 @@ int nb_hits = 0;
 int nb_miss = 0;
 int mut = 0; // boolean
 size_t beginTime;
-char lastEightBits[9] = {'0','0','0','0','0','0','0','0','\0'};
+int size = 16;
 int cpt = 0.0;
 
 void reset() {
@@ -77,8 +77,16 @@ int main(int argc, char** argv) {
     printf("error: failed to mmap\n");
     return 2;
   }
+
+	char lastBits[size+1];
+
+	for(int i = 0; i < size; i++) {
+		lastBits[i] = '0';
+	}
+
+	lastBits[size] = '\0';
   
-	// Display the last eight bits...
+	// Display the last x bits...
   while(1) {    
 
     if(((int)(rdtsc() / SYNCING_CYCLE)) % 10 == 0)  { // IN SYNC
@@ -90,13 +98,13 @@ int main(int argc, char** argv) {
       if(mut) {
         mut = 0;
         double mean = 0;      
-        if(nb_miss > 0) mean = nb_hits / ((double) nb_miss);
-        printf("NbHits: %d, NbMiss: %d, Mean: %f \n", nb_hits, nb_miss, mean);
-        if(mean > 0.67) lastEightBits[cpt%8] = '1';
-				else 						lastEightBits[cpt%8] = '0';
+        if(nb_miss > 0) mean = nb_hits / ((double) nb_miss);        
+        if(mean > 0.5) lastBits[cpt % size] = '1';
+				else 						lastBits[cpt % size] = '0';
         cpt++;
 				if (cpt == 800000) cpt = 0;
-				printf("[%s]\n", lastEightBits);
+				printf("Message: [%s], NbHits: %d, NbMiss: %d, Mean: %f\n", 
+								lastBits, nb_hits, nb_miss, mean);
       }
     }
 

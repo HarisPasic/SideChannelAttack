@@ -9,7 +9,7 @@
 #include "./cacheutils.h"
 
 #define MIN_CACHE_MISS_CYCLES (210)
-#define SYNCING_CYCLE 1000000000.
+#define SYNCING_CYCLE 100000000.
 
 long file_size(const char *filename) {
    struct stat s; 
@@ -52,20 +52,20 @@ int main(int argc, char** argv) {
   }
 
 	int mut = 0;
-	int mod2 = 1;
+	int mod = 1;
   int i = 0;
 	// Sending 10101010101...
   while(1) {
     if(((int)(rdtsc() / SYNCING_CYCLE)) % 10 == 0)  { // IN SYNC
 			if(!mut) mut = 1;			
-      if(mod2) maccess(addr + offset);
+      if(mod) maccess(addr + offset);
 			// printf("%d\n",i);			
     } else {
 			if(mut) {
 				i++;
 				if(i == 2000000000) i = 0;
-				if(i % 2 == 0) mod2 = 1;
-				else mod2 = 0;
+				if(i % 2 == 0) mod = 1;
+				else mod = 0;
 				mut = 0;		
 			}
 		}		
