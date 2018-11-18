@@ -55,8 +55,17 @@ int main(int argc, char** argv) {
 	int mod = 1;
   int i = 0;
 	size_t mask = MASK;
+
+	int step = 0;
+	
+	int init_message[16] = {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1};
+	int message[16] = {1,1,0,1,0,0,0,1,1,0,1,0,0,1,1,1}; // 1101000110100111
+		 
+	
+  /*
+	
 	// Sending 10101010101...
-  while(1) {
+	while(1) {
 		if((rdtsc() & mask) == 0)  { // IN SYNC
 			if(!mut) mut = 1;			
       if(mod) maccess(addr + offset);
@@ -71,5 +80,26 @@ int main(int argc, char** argv) {
 			}
 		}		
   }
+
+	*/
+
+	sleep(2);	
+
+  while(1) {
+		if((rdtsc() & mask) == 0)  { // IN SYNC
+			if(!mut) mut = 1;
+			if(step == 0 && init_message[i%16]) maccess(addr + offset);
+      if(step == 1 && message[i%16]) maccess(addr + offset);
+			// printf("%d\n",i);			
+    } else {
+			if(mut) {
+				i++;
+				if(i == 16) step = 1;
+				if(i == 32) break;
+				mut = 0;		
+			}
+		}		
+  }
+
   return 0;
 }

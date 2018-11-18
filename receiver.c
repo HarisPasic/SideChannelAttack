@@ -7,6 +7,7 @@
 #include <sched.h>
 #include <stdint.h>
 #include "./cacheutils.h"
+#include "./queue.h"
 
 #define MIN_CACHE_MISS_CYCLES (210)
 #define MASK 1<<23
@@ -20,7 +21,7 @@ int nb_miss = 0;
 int mut = 0; // boolean
 size_t beginTime;
 int size = 16;
-int cpt = 0.0;
+size_t cpt = 0;
 
 void reset() {
   nb_hits = 0;   
@@ -89,8 +90,10 @@ int main(int argc, char** argv) {
 	lastBits[size] = '\0';
 	size_t mask = MASK;
   
-	// Display the last x bits...
-  while(1) {    
+	
+  /*
+	// Display the last [size=16] bits...
+	while(1) {    
 		
     // if(((int)(rdtsc() / SYNCING_CYCLE)) % 10 == 0)  { // IN SYNC
     if((rdtsc() & mask) == 0)  { // IN SYNC
@@ -106,9 +109,8 @@ int main(int argc, char** argv) {
         if(mean > 0.15) lastBits[cpt % size] = '1';
 				else 					 lastBits[cpt % size] = '0';
         cpt++;
-				if (cpt == 800000) cpt = 0;
-				printf("Message: [%s], NbHits: %d, NbMiss: %d, Mean: %f, cpt: %d\n", 
-								lastBits, nb_hits, nb_miss, mean, cpt);
+				if (cpt == 8000) cpt = 0;
+				printf("Message: [%s], NbHits: %d, NbMiss: %d, Mean: %f\n", lastBits, nb_hits, nb_miss, mean);
       }
     }
 
@@ -116,5 +118,50 @@ int main(int argc, char** argv) {
 
     for (int i = 0; i < 3; ++i) sched_yield();
   }
+
+	*/
+
+
+	// 16 consecutives "1" => beginning
+	int consecutive1 = 0;
+  while(1) {    
+		
+    // if(((int)(rdtsc() / SYNCING_CYCLE)) % 10 == 0)  { // IN SYNC
+    if((rdtsc() & mask) == 0)  { // IN SYNC
+      if(!mut) {
+				mut = 1;
+        reset();
+      }      
+    } else { // NOT IN SYNC      
+      if(mut) {
+        mut = 0;				
+
+        double mean = nb_hits;      
+        if(nb_miss != 0) mean = nb_hits / ((double) nb_miss);        
+        if(mean > 0.15) {
+					lastBits[cpt % size] = '1';
+					consecutive1++;
+				}
+				else {
+					lastBits[cpt % size] = '0';
+					consecutive1 = 0;
+				}
+
+        cpt++;
+				if (cpt == 8000) cpt = 0;
+
+				if(consecutive1 == 16) {
+					cpt = 0;
+				}
+
+				printf("Message: [%s], NbHits: %d, NbMiss: %d, Mean: %f\n", lastBits, nb_hits, nb_miss, mean);
+      }
+    }
+
+    flushandreload(addr + offset);  
+
+    for (int i = 0; i < 3; ++i) sched_yield();
+  }
+
   return 0;
 }
