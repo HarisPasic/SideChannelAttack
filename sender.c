@@ -5,65 +5,103 @@
 #include <stdio.h>
 #include <string.h>
 #include <sched.h>
+#include <stdlib.h>
 #include <stdint.h>
 #include "./cacheutils.h"
 
 #define MIN_CACHE_MISS_CYCLES (210)
 #define MASK 1<<23
+#define MAX_MESSAGE_SIZE 128
+#define MAX_MESSAGE_BITS_SIZE 1024
+
+// 8 * 512 = 4096
 
 long file_size(const char *filename) {
    struct stat s; 
    if (stat(filename,&s) != 0) {
       printf("Error reading file stats !\n");
-      return 0;
+      return 2;
    } 
    return s.st_size; 
 }
 
-int main(int argc, char** argv) {
-  char* name = argv[1];
-  char* offsetp = argv[2];
-  char* value = argv[3];
-  char* length = argv[4];
+int readFileContent(char *message, char *fileName) {
+	int c;
+	int ctr_characters = 0;
+	FILE *fp = fopen(fileName, "r");
 
-  if (argc != 5) {    
-    printf("usage: ./sender file offset value valueLength\n");
-    printf("example: ./sender chaton.jpeg 0x00 100110 6\n");
+	if(fp == NULL) {
+		printf("error: failed to open fileWithData\n");
+    return -1;
+	} 
+
+	while ((c = fgetc(fp)) != EOF) {
+		if(ctr_characters == MAX_MESSAGE_SIZE) break;
+		message[ctr_characters] = (char) c;
+		++ctr_characters;
+	}
+ 	fclose(fp);
+ 
+	return ctr_characters;
+}
+
+int main(int argc, char** argv) {
+
+	if (argc != 4) {    
+    printf("usage: ./sender fileForMmap offset fileWithData\n");
+    printf("example: ./sender chaton.jpeg 0x00 data.txt\n");
     return 1;
   }
 
+  char* fileForMmap = argv[1];
+  char* offsetString = argv[2];
+	char* fileWithData = argv[3];
+
   unsigned int offset = 0;
-  !sscanf(offsetp,"%x",&offset);
+  !sscanf(offsetString, "%x", &offset);
 
-  unsigned int len = 0;
-  !sscanf(length,"%d",&len);
-
-  int fd = open(name,O_RDONLY);
+  int fd = open(fileForMmap, O_RDONLY);
   if (fd < 3) {
-    printf("error: failed to open file\n");
+    printf("error: failed to open fileForMmap\n");
     return 2;
   }
 
-  unsigned char* addr = (unsigned char*) mmap(0, file_size(name), PROT_READ, MAP_SHARED, fd, 0);
+  unsigned char* addr = (unsigned char*) mmap(0, file_size(fileForMmap), PROT_READ, MAP_SHARED, fd, 0);
 
   if (addr == (void*) -1 || addr == (void*) 0) {
     printf("error: failed to mmap\n");
     return 2;
   }
+	
+	char message[MAX_MESSAGE_SIZE];
+	int message_size = readFileContent(message, fileWithData);
 
-	int mut = 0;
-	int mod = 1;
-  int i = 0;
-	size_t mask = MASK;
+	if(message_size == -1) return 2; // ERROR
 
-	int step = 0;
+	int message_bits[MAX_MESSAGE_BITS_SIZE];
+
+	for(int i = 0; i < message_size; ++i) {
+		int ind = i * 8;
+		for( int j = 7; j >= 0; --j ) message_bits[ind + (7-j)] = (( message[i] >> j ) & 1 ? 1 : 0);		
+	}
+
+	for(int i = message_size * 8; i < MAX_MESSAGE_BITS_SIZE; ++i) message_bits[i] = 0;
+	
+
+	int mut = 0; // MUTEX	
+  int i = 0; // COUNTER
+	size_t mask = MASK;	
 	
 	int init_message[16] = {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1};
-	int message[16] = {1,1,0,1,0,0,0,1,1,0,1,0,0,1,1,1}; // 1101000110100111
+	int last_message[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+
+	// int message[16] = {1,1,0,1,0,0,0,1,1,0,1,0,0,1,1,1}; // 1101000110100111
+
+	
 		 
 	
   /*
-	
+	int mod = 1;
 	// Sending 10101010101...
 	while(1) {
 		if((rdtsc() & mask) == 0)  { // IN SYNC
@@ -82,6 +120,8 @@ int main(int argc, char** argv) {
   }
 
 	*/
+	/*
+	int step = 0;
 
 	sleep(2);	
 
@@ -99,7 +139,7 @@ int main(int argc, char** argv) {
 				mut = 0;		
 			}
 		}		
-  }
+  }*/
 
   return 0;
 }
