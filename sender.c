@@ -67,25 +67,26 @@ int main(int argc, char** argv) {
   }
 
   unsigned char* addr = (unsigned char*) mmap(0, file_size(fileForMmap), PROT_READ, MAP_SHARED, fd, 0);
-
   if (addr == (void*) -1 || addr == (void*) 0) {
     printf("error: failed to mmap\n");
     return 2;
   }
 	
+	// READING DATA FROM FILE
 	char message[MAX_MESSAGE_SIZE];
 	int message_size = readFileContent(message, fileWithData);
+	if(message_size == -1) return 2; // ERROR WHILE READING
 
-	if(message_size == -1) return 2; // ERROR
-
+	// BINARY REPRESENTATION OF THE DATA
 	int message_bits[MAX_MESSAGE_BITS_SIZE];
-
+	int message_bits_size = message_size * 8;
 	for(int i = 0; i < message_size; ++i) {
 		int ind = i * 8;
-		for( int j = 7; j >= 0; --j ) message_bits[ind + (7-j)] = (( message[i] >> j ) & 1 ? 1 : 0);		
-	}
+		for( int j = 7; j >= 0; --j ) message_bits[ind + (7-j)] = (( message[i] >> j ) & 1 ? 1 : 0);
+	}	
+	for(int i = message_bits_size; i < MAX_MESSAGE_BITS_SIZE; ++i) message_bits[i] = 0;
 
-	for(int i = message_size * 8; i < MAX_MESSAGE_BITS_SIZE; ++i) message_bits[i] = 0;
+	// for(int i = 0; i < MAX_MESSAGE_BITS_SIZE; ++i) printf("%d", message_bits[i]);
 	
 
 	int mut = 0; // MUTEX	
@@ -95,10 +96,7 @@ int main(int argc, char** argv) {
 	int init_message[16] = {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1};
 	int last_message[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 
-	// int message[16] = {1,1,0,1,0,0,0,1,1,0,1,0,0,1,1,1}; // 1101000110100111
-
-	
-		 
+	// int message[16] = {1,1,0,1,0,0,0,1,1,0,1,0,0,1,1,1}; // 1101000110100111		 
 	
   /*
 	int mod = 1;
@@ -120,26 +118,30 @@ int main(int argc, char** argv) {
   }
 
 	*/
-	/*
+	
 	int step = 0;
 
-	sleep(2);	
+	// sleep(2);
 
   while(1) {
+		// &printf("step : %d , i: %d \n", step, i);
 		if((rdtsc() & mask) == 0)  { // IN SYNC
 			if(!mut) mut = 1;
-			if(step == 0 && init_message[i%16]) maccess(addr + offset);
-      if(step == 1 && message[i%16]) maccess(addr + offset);
+			if(step == 0 && init_message[i]) maccess(addr + offset);
+			if(step == 1 && message_bits[i]) maccess(addr + offset);      
 			// printf("%d\n",i);			
     } else {
 			if(mut) {
 				i++;
-				if(i == 16) step = 1;
-				if(i == 32) break;
+				if(step == 0 && i == 16) {
+					step = 1;
+					i = 0;
+				}
+				if(i == MAX_MESSAGE_BITS_SIZE) break;
 				mut = 0;		
 			}
 		}		
-  }*/
+  }
 
   return 0;
 }

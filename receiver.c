@@ -11,6 +11,8 @@
 
 #define MIN_CACHE_MISS_CYCLES (210)
 #define MASK 1<<23
+#define MAX_MESSAGE_SIZE 128
+#define MAX_MESSAGE_BITS_SIZE 1024
 
 // MASK 1<<23 : 148 bits/s
 
@@ -122,41 +124,67 @@ int main(int argc, char** argv) {
 	*/
 
 
+	int step = 0; // 1: init received, 2: creating file
+	int	message_bits[MAX_MESSAGE_BITS_SIZE];
+
 	// 16 consecutives "1" => beginning
 	int consecutive1 = 0;
   while(1) {    
-		
-    // if(((int)(rdtsc() / SYNCING_CYCLE)) % 10 == 0)  { // IN SYNC
-    if((rdtsc() & mask) == 0)  { // IN SYNC
-      if(!mut) {
-				mut = 1;
-        reset();
-      }      
-    } else { // NOT IN SYNC      
-      if(mut) {
-        mut = 0;				
 
-        double mean = nb_hits;      
-        if(nb_miss != 0) mean = nb_hits / ((double) nb_miss);        
-        if(mean > 0.15) {
-					lastBits[cpt % size] = '1';
-					consecutive1++;
-				}
-				else {
-					lastBits[cpt % size] = '0';
-					consecutive1 = 0;
-				}
+		//printf("STEP %d, consecutive1 : %d, ctp %ld\n", step, consecutive1, cpt);
 
-        cpt++;
-				if (cpt == 8000) cpt = 0;
+		if(step == 2) {
+			// CONVERT BITS TO CHAR
+			// STORE IN A FILE
+			for(int i = 0; i < MAX_MESSAGE_BITS_SIZE; ++i) {
+				printf("%d", message_bits[i]);	
+			}
+			printf("\n");
+			sleep(2);
+			step = 0;
+		} else {
+		  // if(((int)(rdtsc() / SYNCING_CYCLE)) % 10 == 0)  { // IN SYNC
+		  if((rdtsc() & mask) == 0)  { // IN SYNC
+		    if(!mut) {
+					mut = 1;
+		      reset();
+		    }      
+		  } else { // NOT IN SYNC      
+		    if(mut) {
+		      mut = 0;				
 
-				if(consecutive1 == 16) {
-					cpt = 0;
-				}
+		      double mean = nb_hits;      
+		      if(nb_miss != 0) mean = nb_hits / ((double) nb_miss);  
+      
+		      if(mean > 0.02) {
+						if(step == 1) message_bits[cpt] = 1;
+						else consecutive1++;
+						lastBits[cpt % size] = '1';
+						
+					} else {
+						if(step == 1) message_bits[cpt] = 0;
+						else consecutive1 = 0;
+						lastBits[cpt % size] = '0';						
+					}
 
-				printf("Message: [%s], NbHits: %d, NbMiss: %d, Mean: %f\n", lastBits, nb_hits, nb_miss, mean);
-      }
-    }
+		      cpt++;
+					
+					if (cpt == MAX_MESSAGE_BITS_SIZE) {
+						cpt = 0;
+						if(step == 1) step = 2;
+					}
+
+					if(consecutive1 == 16) { // BEGINNING OF THE COMMUNICATION
+						printf("YEAH \\o/ \n");
+						consecutive1 = 0;
+						cpt = 0;
+						step = 1;
+					}
+
+					//printf("Message: [%s], NbHits: %d, NbMiss: %d, Mean: %f\n", lastBits, nb_hits, nb_miss, mean);
+		    }
+		  }
+		}
 
     flushandreload(addr + offset);  
 
