@@ -6,6 +6,7 @@
 #include <string.h>
 #include <sched.h>
 #include <stdint.h>
+#include <time.h>
 #include "./cacheutils.h"
 #include "./queue.h"
 
@@ -126,6 +127,7 @@ int main(int argc, char** argv) {
 
 	int step = 0; // 1: init received, 2: creating file
 	int	message_bits[MAX_MESSAGE_BITS_SIZE];
+	time_t time_of_begin_tag;
 
 	// 16 consecutives "1" => beginning
 	int consecutive1 = 0;
@@ -136,10 +138,21 @@ int main(int argc, char** argv) {
 		if(step == 2) {
 			// CONVERT BITS TO CHAR
 			// STORE IN A FILE
+			time_t diff = time(NULL) - time_of_begin_tag;
+			printf("Duration: %lu seconds\n", diff);
+			printf("Speed: %.2f bits per second\n", ((float)MAX_MESSAGE_BITS_SIZE) / diff);
+			printf("Message:\n<BEGIN>\n");
+			int ch = 0;
+			int mod8 = 0;
 			for(int i = 0; i < MAX_MESSAGE_BITS_SIZE; ++i) {
-				printf("%d", message_bits[i]);	
+				mod8 = i % 8;
+				if(i && !mod8) {
+					printf("%c", (char) ch);
+					ch = 0;
+				}
+				if (message_bits[i]) ch += (1<<(7-mod8));			
 			}
-			printf("\n");
+			printf("\n<END>\n");
 			sleep(2);
 			step = 0;
 		} else {
@@ -175,7 +188,8 @@ int main(int argc, char** argv) {
 					}
 
 					if(consecutive1 == 16) { // BEGINNING OF THE COMMUNICATION
-						printf("YEAH \\o/ \n");
+						printf("GOT TAG \\o/ ! \n");
+						time_of_begin_tag = time(NULL);
 						consecutive1 = 0;
 						cpt = 0;
 						step = 1;
