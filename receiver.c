@@ -11,11 +11,13 @@
 #include "./queue.h"
 
 #define MIN_CACHE_MISS_CYCLES (210)
-#define MASK 1<<23
-#define MAX_MESSAGE_SIZE 128
-#define MAX_MESSAGE_BITS_SIZE 1024
+#define MASK 1<<20
+#define MAX_MESSAGE_SIZE 512
+#define MAX_MESSAGE_BITS_SIZE 4096
 
 // MASK 1<<23 : 148 bits/s
+// MASK 1<<20 : 1365 bits/s
+// à partir de 1<<19, on commence à avoir des erreurs
 
 size_t kpause = 0;
 
@@ -92,38 +94,6 @@ int main(int argc, char** argv) {
 
 	lastBits[size] = '\0';
 	size_t mask = MASK;
-  
-	
-  /*
-	// Display the last [size=16] bits...
-	while(1) {    
-		
-    // if(((int)(rdtsc() / SYNCING_CYCLE)) % 10 == 0)  { // IN SYNC
-    if((rdtsc() & mask) == 0)  { // IN SYNC
-      if(!mut) {
-				mut = 1;
-        reset();
-      }      
-    } else { // NOT IN SYNC      
-      if(mut) {
-        mut = 0;
-        double mean = nb_hits;      
-        if(nb_miss != 0) mean = nb_hits / ((double) nb_miss);        
-        if(mean > 0.15) lastBits[cpt % size] = '1';
-				else 					 lastBits[cpt % size] = '0';
-        cpt++;
-				if (cpt == 8000) cpt = 0;
-				printf("Message: [%s], NbHits: %d, NbMiss: %d, Mean: %f\n", lastBits, nb_hits, nb_miss, mean);
-      }
-    }
-
-    flushandreload(addr + offset);  
-
-    for (int i = 0; i < 3; ++i) sched_yield();
-  }
-
-	*/
-
 
 	int step = 0; // 1: init received, 2: creating file
 	int	message_bits[MAX_MESSAGE_BITS_SIZE];
@@ -136,12 +106,10 @@ int main(int argc, char** argv) {
 		//printf("STEP %d, consecutive1 : %d, ctp %ld\n", step, consecutive1, cpt);
 
 		if(step == 2) {
-			// CONVERT BITS TO CHAR
-			// STORE IN A FILE
 			time_t diff = time(NULL) - time_of_begin_tag;
-			printf("Duration: %lu seconds\n", diff);
-			printf("Speed: %.2f bits per second\n", ((float)MAX_MESSAGE_BITS_SIZE) / diff);
-			printf("Message:\n<BEGIN>\n");
+			printf("Duration : %lu seconds\n", diff);
+			printf("Speed    : %.2f bits per second\n", ((float)MAX_MESSAGE_BITS_SIZE) / diff);
+			printf("Message  :\n<<<BEGIN>>>\n");
 			int ch = 0;
 			int mod8 = 0;
 			for(int i = 0; i < MAX_MESSAGE_BITS_SIZE; ++i) {
@@ -152,11 +120,10 @@ int main(int argc, char** argv) {
 				}
 				if (message_bits[i]) ch += (1<<(7-mod8));			
 			}
-			printf("\n<END>\n");
+			printf("\n<<<END>>>\n");
 			sleep(2);
 			step = 0;
 		} else {
-		  // if(((int)(rdtsc() / SYNCING_CYCLE)) % 10 == 0)  { // IN SYNC
 		  if((rdtsc() & mask) == 0)  { // IN SYNC
 		    if(!mut) {
 					mut = 1;

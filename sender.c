@@ -10,9 +10,9 @@
 #include "./cacheutils.h"
 
 #define MIN_CACHE_MISS_CYCLES (210)
-#define MASK 1<<23
-#define MAX_MESSAGE_SIZE 128
-#define MAX_MESSAGE_BITS_SIZE 1024
+#define MASK 1<<20
+#define MAX_MESSAGE_SIZE 512
+#define MAX_MESSAGE_BITS_SIZE 4096
 
 // 8 * 512 = 4096
 
@@ -82,54 +82,23 @@ int main(int argc, char** argv) {
 	int message_bits_size = message_size * 8;
 	for(int i = 0; i < message_size; ++i) {
 		int ind = i * 8;
-		for( int j = 7; j >= 0; --j ) message_bits[ind + (7-j)] = (( message[i] >> j ) & 1 ? 1 : 0);
+		for(int j = 7; j >= 0; --j ) message_bits[ind + (7-j)] = (( message[i] >> j ) & 1 ? 1 : 0);
 	}	
-	for(int i = message_bits_size; i < MAX_MESSAGE_BITS_SIZE; ++i) message_bits[i] = 0;
-
-	// for(int i = 0; i < MAX_MESSAGE_BITS_SIZE; ++i) printf("%d", message_bits[i]);
-	
+	for(int i = message_bits_size; i < MAX_MESSAGE_BITS_SIZE; ++i) message_bits[i] = 0; // space
 
 	int mut = 0; // MUTEX	
   int i = 0; // COUNTER
 	size_t mask = MASK;	
 	
 	int init_message[16] = {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1};
-	int last_message[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-
-	// int message[16] = {1,1,0,1,0,0,0,1,1,0,1,0,0,1,1,1}; // 1101000110100111		 
-	
-  /*
-	int mod = 1;
-	// Sending 10101010101...
-	while(1) {
-		if((rdtsc() & mask) == 0)  { // IN SYNC
-			if(!mut) mut = 1;			
-      if(mod) maccess(addr + offset);
-			// printf("%d\n",i);			
-    } else {
-			if(mut) {
-				i++;
-				if(i == 2000000000) i = 0;
-				if(i % 2 == 0) mod = 1;
-				else mod = 0;
-				mut = 0;		
-			}
-		}		
-  }
-
-	*/
 	
 	int step = 0;
 
-	// sleep(2);
-
   while(1) {
-		// &printf("step : %d , i: %d \n", step, i);
 		if((rdtsc() & mask) == 0)  { // IN SYNC
 			if(!mut) mut = 1;
 			if(step == 0 && init_message[i]) maccess(addr + offset);
-			if(step == 1 && message_bits[i]) maccess(addr + offset);      
-			// printf("%d\n",i);			
+			if(step == 1 && message_bits[i]) maccess(addr + offset);	
     } else {
 			if(mut) {
 				i++;
