@@ -11,13 +11,8 @@
 #include "./queue.h"
 
 size_t kpause = 0;
-
 int nb_hits = 0;
 int nb_miss = 0;
-int mut = 0; // boolean
-size_t beginTime;
-int size = 16;
-size_t cpt = 0;
 
 void reset() {
   nb_hits = 0;   
@@ -33,7 +28,6 @@ void flushandreload(void* addr)
   if (delta < MIN_CACHE_MISS_CYCLES) {
     if (kpause > 0) {      
       nb_hits++;
-      // printf("%lu: Cache Hit (%lu cycles) after a pause of %lu cycles\n", time, delta, kpause);
     }
     kpause = 0;
   }
@@ -77,26 +71,18 @@ int main(int argc, char** argv) {
     return 2;
   }
 
-	char lastBits[size+1];
-
-	for(int i = 0; i < size; i++) {
-		lastBits[i] = '0';
-	}
-
-	lastBits[size] = '\0';
-	size_t mask = MASK;
-
-	int step = 0; // 1: init received, 2: creating file
+	int step = 0; // 1: init received, 2: display message
 	int	message_bits[MAX_MESSAGE_BITS_SIZE];
 	time_t time_of_begin_tag;
 
-	int consecutive1 = 0;
+	int bit_1_count = 0;
+  size_t bit_count = 0;
+  int mut = 0; // mutex (boolean)
   while(1) {    
 
-		//printf("STEP %d, consecutive1 : %d, ctp %ld\n", step, consecutive1, cpt);
-
-		if(step == 2) {
+		if(step == 2) { // END(MESSAGE)
 			time_t diff = time(NULL) - time_of_begin_tag;
+
 			printf("Duration : %lu seconds\n", diff);
 			printf("Speed    : %.2f bits per second\n", ((float)MAX_MESSAGE_BITS_SIZE) / diff);
 			printf("Message  :\n<<<BEGIN>>>\n");
@@ -115,11 +101,12 @@ int main(int argc, char** argv) {
         printf("%c", (char) ch);        
 			}
 
-			printf("\n<<<END>>>\n");
-			sleep(2);
+			printf("\n<<<END>>>\n\n");
+
 			step = 0;
+      bit_count = 0;
 		} else {
-		  if((rdtsc() & mask) == 0)  { // IN SYNC
+		  if((rdtsc() & MASK) == 0)  { // IN SYNC
 		    if(!mut) {
 					mut = 1;
 		      reset();
@@ -132,32 +119,24 @@ int main(int argc, char** argv) {
 		      if(nb_miss != 0) mean = nb_hits / ((double) nb_miss);  
       
 		      if(mean > THRESHOLD) {
-						if(step == 1) message_bits[cpt] = 1;
-						else consecutive1++;
-						lastBits[cpt % size] = '1';
-						
+						if (step) message_bits[bit_count] = 1;
+						else bit_1_count++;						
 					} else {
-						if(step == 1) message_bits[cpt] = 0;
-						else if(consecutive1 > 0) consecutive1--;
-						lastBits[cpt % size] = '0';						
+						if (step) message_bits[bit_count] = 0;
+						else if(bit_1_count > 0) bit_1_count--;					
 					}
 
-		      cpt++;
+		      bit_count++;
 					
-					if (cpt == MAX_MESSAGE_BITS_SIZE) {
-						cpt = 0;
-						if(step == 1) step = 2;
-					}
+					if (bit_count == MAX_MESSAGE_BITS_SIZE && step) step = 2;
 
-					if(consecutive1 == 13) { // BEGINNING OF THE COMMUNICATION
+					if(bit_1_count == 13) { // BEGIN(MESSAGE)
 						printf("GOT TAG \\o/ ! \n");
 						time_of_begin_tag = time(NULL);
-						consecutive1 = 0;
-						cpt = 0;
+						bit_1_count = 0;
+						bit_count = 0;
 						step = 1;
 					}
-
-					//printf("Message: [%s], NbHits: %d, NbMiss: %d, Mean: %f\n", lastBits, nb_hits, nb_miss, mean);
 		    }
 		  }
 		}

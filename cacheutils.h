@@ -18,11 +18,11 @@
 
 #define MIN_CACHE_MISS_CYCLES (210)
 #define THRESHOLD 0.02
-#define MASK 1<<20
+#define MASK 1<<19
 #define REDUNDANCY 8
 #define BYTE_SIZE 8
-#define MAX_MESSAGE_SIZE 16
-#define MAX_MESSAGE_BITS_SIZE 1024
+#define MAX_MESSAGE_SIZE 1024
+#define MAX_MESSAGE_BITS_SIZE 65536
 
 // MAX_MESSAGE_SIZE = 1024 characters
 // 1 character = 8 bits
@@ -31,8 +31,8 @@
 
 // MASK 1<<23 : 148 bits/s
 // MASK 1<<20 : 1365 bits/s
-// à partir de 1<<19, on commence à avoir des erreurs
-
+// MASK 1<<19 : 2340 bits/s
+// à partir de 1<<18, on commence à avoir des erreurs
 
 uint64_t rdtsc_nofence() {
   uint64_t a, d;

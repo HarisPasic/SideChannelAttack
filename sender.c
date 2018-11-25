@@ -9,6 +9,7 @@
 #include <stdint.h>
 #include "./cacheutils.h"
 
+// Return the size of a file
 long file_size(const char *filename) {
    struct stat s; 
    if (stat(filename,&s) != 0) {
@@ -18,6 +19,8 @@ long file_size(const char *filename) {
    return s.st_size; 
 }
 
+// Read file content (store it in "message") and 
+// return the number of characters
 int readFileContent(char *message, char *fileName) {
 	int c;
 	int ctr_characters = 0;
@@ -70,7 +73,7 @@ int main(int argc, char** argv) {
 	int message_size = readFileContent(message, fileWithData);
 	if(message_size == -1) return 2; // ERROR WHILE READING
 
-	// BINARY REPRESENTATION OF THE DATA WITH REDUNDACY
+	// TRANSFORM DATA (array of char) TO BINARY WITH REDUNDACY (array of int)
 	int message_bits[MAX_MESSAGE_BITS_SIZE];
 	int real_message_bits_size = message_size * BYTE_SIZE * REDUNDANCY;
 	for(int i = 0; i < message_size; ++i) {
@@ -81,12 +84,8 @@ int main(int argc, char** argv) {
       for(int k = 0 ; k < REDUNDANCY ; ++k) message_bits[indI + indJ + k] = value;     
     }
 	}	
-	for(int i = real_message_bits_size; i < MAX_MESSAGE_BITS_SIZE; ++i) message_bits[i] = 0; // space
-
-  /*printf("%d\n", MAX_MESSAGE_BITS_SIZE);
-  for(int i = 0 ; i < MAX_MESSAGE_BITS_SIZE; ++i) {
-    printf("%d", message_bits[i]);
-  }*/
+  // FILL THE REMAINING SPACE WITH 0
+	for(int i = real_message_bits_size; i < MAX_MESSAGE_BITS_SIZE; ++i) message_bits[i] = 0;
 
 	int mut = 0; // MUTEX	
   int i = 0; // COUNTER
@@ -99,19 +98,18 @@ int main(int argc, char** argv) {
   while(1) {
 		if((rdtsc() & mask) == 0)  { // IN SYNC
 			if(!mut) mut = 1;
-			if(step == 0 && init_message[i]) maccess(addr + offset);
-			if(step == 1 && message_bits[i]) maccess(addr + offset);	
+			if(!step && init_message[i] || step  && message_bits[i]) maccess(addr + offset);
     } else {
 			if(mut) {
 				i++;
-				if(step == 0 && i == 16) {
+				if(!step && i == 16) {
 					step = 1;
 					i = 0;
 				}
 				if(i == MAX_MESSAGE_BITS_SIZE) break;
 				mut = 0;		
 			}
-		}		
+		}
   }
 
   return 0;
