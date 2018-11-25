@@ -90,7 +90,6 @@ int main(int argc, char** argv) {
 	int	message_bits[MAX_MESSAGE_BITS_SIZE];
 	time_t time_of_begin_tag;
 
-	// 16 consecutives "1" => beginning
 	int consecutive1 = 0;
   while(1) {    
 
@@ -101,16 +100,21 @@ int main(int argc, char** argv) {
 			printf("Duration : %lu seconds\n", diff);
 			printf("Speed    : %.2f bits per second\n", ((float)MAX_MESSAGE_BITS_SIZE) / diff);
 			printf("Message  :\n<<<BEGIN>>>\n");
-			int ch = 0;
-			int mod8 = 0;
-			for(int i = 0; i < MAX_MESSAGE_BITS_SIZE; ++i) {
-				mod8 = i % 8;
-				if(i && !mod8) {
-					printf("%c", (char) ch);
-					ch = 0;
-				}
-				if (message_bits[i]) ch += (1<<(7-mod8));			
+      
+      int toInc = BYTE_SIZE * REDUNDANCY;
+			for(int i = 0; i < MAX_MESSAGE_BITS_SIZE; i += toInc) {
+        int ch = 0; // char
+        for(int j = 0; j < BYTE_SIZE; ++j) {
+            int nbOf1 = 0;
+            int indJ = j * BYTE_SIZE;
+            for(int k = 0; k < REDUNDANCY; ++k) {
+              if(message_bits[i + indJ + k]) nbOf1++;
+            }
+            if(nbOf1 > 4) ch += (1<<(7-j));
+        }
+        printf("%c", (char) ch);        
 			}
+
 			printf("\n<<<END>>>\n");
 			sleep(2);
 			step = 0;
@@ -127,14 +131,14 @@ int main(int argc, char** argv) {
 		      double mean = nb_hits;      
 		      if(nb_miss != 0) mean = nb_hits / ((double) nb_miss);  
       
-		      if(mean > 0.02) {
+		      if(mean > THRESHOLD) {
 						if(step == 1) message_bits[cpt] = 1;
 						else consecutive1++;
 						lastBits[cpt % size] = '1';
 						
 					} else {
 						if(step == 1) message_bits[cpt] = 0;
-						else consecutive1 = 0;
+						else if(consecutive1 > 0) consecutive1--;
 						lastBits[cpt % size] = '0';						
 					}
 
@@ -145,7 +149,7 @@ int main(int argc, char** argv) {
 						if(step == 1) step = 2;
 					}
 
-					if(consecutive1 == 16) { // BEGINNING OF THE COMMUNICATION
+					if(consecutive1 == 13) { // BEGINNING OF THE COMMUNICATION
 						printf("GOT TAG \\o/ ! \n");
 						time_of_begin_tag = time(NULL);
 						consecutive1 = 0;

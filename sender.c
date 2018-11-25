@@ -70,23 +70,23 @@ int main(int argc, char** argv) {
 	int message_size = readFileContent(message, fileWithData);
 	if(message_size == -1) return 2; // ERROR WHILE READING
 
-	// BINARY REPRESENTATION OF THE DATA
+	// BINARY REPRESENTATION OF THE DATA WITH REDUNDACY
 	int message_bits[MAX_MESSAGE_BITS_SIZE];
-	int real_message_bits_size = message_size * 8 * REDUNDANCY;
+	int real_message_bits_size = message_size * BYTE_SIZE * REDUNDANCY;
 	for(int i = 0; i < message_size; ++i) {
-		int indI = i * 8 * REDUNDANCY;
+		int indI = i * BYTE_SIZE * REDUNDANCY;
 		for(int j = 7; j >= 0; --j ) {
       int value = (( message[i] >> j ) & 1 ? 1 : 0);
-      int indJ = 7-j;
+      int indJ = (7-j) * BYTE_SIZE;
       for(int k = 0 ; k < REDUNDANCY ; ++k) message_bits[indI + indJ + k] = value;     
     }
 	}	
 	for(int i = real_message_bits_size; i < MAX_MESSAGE_BITS_SIZE; ++i) message_bits[i] = 0; // space
 
-  printf("%d\n", MAX_MESSAGE_BITS_SIZE);
+  /*printf("%d\n", MAX_MESSAGE_BITS_SIZE);
   for(int i = 0 ; i < MAX_MESSAGE_BITS_SIZE; ++i) {
     printf("%d", message_bits[i]);
-  }
+  }*/
 
 	int mut = 0; // MUTEX	
   int i = 0; // COUNTER
