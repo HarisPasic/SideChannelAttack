@@ -10,15 +10,6 @@
 #include "./cacheutils.h"
 #include "./queue.h"
 
-#define MIN_CACHE_MISS_CYCLES (210)
-#define MASK 1<<20
-#define MAX_MESSAGE_SIZE 512
-#define MAX_MESSAGE_BITS_SIZE 4096
-
-// MASK 1<<23 : 148 bits/s
-// MASK 1<<20 : 1365 bits/s
-// à partir de 1<<19, on commence à avoir des erreurs
-
 size_t kpause = 0;
 
 int nb_hits = 0;

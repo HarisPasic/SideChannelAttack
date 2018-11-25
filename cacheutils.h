@@ -14,6 +14,24 @@
 #define MIN(X,Y) (((X) < (Y)) ? (X) : (Y))
 #endif
 
+// FOR RECEIVER AND SENDER
+
+#define MIN_CACHE_MISS_CYCLES (210)
+#define MASK 1<<20
+#define REDUNDANCY 8
+#define MAX_MESSAGE_SIZE 16
+#define MAX_MESSAGE_BITS_SIZE 1024
+
+// MAX_MESSAGE_SIZE = 1024 characters
+// 1 character = 8 bits
+// REDUNDANCY = repeat a bit REDUNDANCY times 
+// MAX_MESSAGE_BITS_SIZE = MAX_MESSAGE_SIZE * 8 * REDUNDANCY
+
+// MASK 1<<23 : 148 bits/s
+// MASK 1<<20 : 1365 bits/s
+// à partir de 1<<19, on commence à avoir des erreurs
+
+
 uint64_t rdtsc_nofence() {
   uint64_t a, d;
   asm volatile ("rdtsc" : "=a" (a), "=d" (d));

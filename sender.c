@@ -9,13 +9,6 @@
 #include <stdint.h>
 #include "./cacheutils.h"
 
-#define MIN_CACHE_MISS_CYCLES (210)
-#define MASK 1<<20
-#define MAX_MESSAGE_SIZE 512
-#define MAX_MESSAGE_BITS_SIZE 4096
-
-// 8 * 512 = 4096
-
 long file_size(const char *filename) {
    struct stat s; 
    if (stat(filename,&s) != 0) {
@@ -79,12 +72,21 @@ int main(int argc, char** argv) {
 
 	// BINARY REPRESENTATION OF THE DATA
 	int message_bits[MAX_MESSAGE_BITS_SIZE];
-	int message_bits_size = message_size * 8;
+	int real_message_bits_size = message_size * 8 * REDUNDANCY;
 	for(int i = 0; i < message_size; ++i) {
-		int ind = i * 8;
-		for(int j = 7; j >= 0; --j ) message_bits[ind + (7-j)] = (( message[i] >> j ) & 1 ? 1 : 0);
+		int indI = i * 8 * REDUNDANCY;
+		for(int j = 7; j >= 0; --j ) {
+      int value = (( message[i] >> j ) & 1 ? 1 : 0);
+      int indJ = 7-j;
+      for(int k = 0 ; k < REDUNDANCY ; ++k) message_bits[indI + indJ + k] = value;     
+    }
 	}	
-	for(int i = message_bits_size; i < MAX_MESSAGE_BITS_SIZE; ++i) message_bits[i] = 0; // space
+	for(int i = real_message_bits_size; i < MAX_MESSAGE_BITS_SIZE; ++i) message_bits[i] = 0; // space
+
+  printf("%d\n", MAX_MESSAGE_BITS_SIZE);
+  for(int i = 0 ; i < MAX_MESSAGE_BITS_SIZE; ++i) {
+    printf("%d", message_bits[i]);
+  }
 
 	int mut = 0; // MUTEX	
   int i = 0; // COUNTER
