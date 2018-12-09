@@ -22,4 +22,3 @@ Django          : Django.
 Amerigo Vessepi : Can you spell it?
 Django          : D-J-A-N-G-O. The D is silent.
 Amerigo Vessepi : I know.
-
