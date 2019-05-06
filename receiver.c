@@ -8,7 +8,6 @@
 #include <stdint.h>
 #include <time.h>
 #include "./cacheutils.h"
-#include "./queue.h"
 
 size_t kpause = 0;
 int nb_hits = 0;
